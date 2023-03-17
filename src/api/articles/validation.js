@@ -20,6 +20,12 @@ const articlesSchema = {
     notEmpty: true,
     errorMessage: "Brand is required and should be a string",
   },
+  imageUrl: {
+    in: ["body"],
+    isURL: true,
+    notEmpty: true,
+    errorMessage: "Image URL is required and should be a valid URL",
+  },
   price: {
     in: ["body"],
     isFloat: {

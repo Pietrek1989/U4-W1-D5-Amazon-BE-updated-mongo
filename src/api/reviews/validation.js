@@ -17,12 +17,12 @@ const reviewsSchema = {
     notEmpty: true,
     errorMessage: "Rate is required and should be an integer between 1 and 5",
   },
-  productId: {
-    in: ["body"],
-    isString: true,
-    notEmpty: true,
-    errorMessage: "Product ID is required and should be a string",
-  },
+  // productId: {
+  //   in: ["body"],
+  //   isString: true,
+  //   notEmpty: true,
+  //   errorMessage: "Product ID is required and should be a string",
+  // },
 };
 export const checkReviewsSchema = checkSchema(reviewsSchema);
 

@@ -1,57 +1,42 @@
-import Express from "express";
-import uniqid from "uniqid";
-import createHttpError from "http-errors";
-import { checkReviewsSchema, triggerBadRequest } from "./validation.js";
-import { getArticles, getReviews, writeReviews } from "../../lib/fs-tools.js";
+import express from "express";
+import createError from "http-errors";
+import ReviewsModel from "./model.js";
 
-const reviewsRouter = Express.Router();
+const reviewsRouter = express.Router();
 
-reviewsRouter.post(
-  "/:articleId",
-  checkReviewsSchema,
-  triggerBadRequest,
-  async (req, res, next) => {
-    try {
-      const articleArray = await getArticles();
-      const index = articleArray.findIndex(
-        (article) => article.id === req.params.articleId
-      );
-      if (index !== -1) {
-        const newReview = {
-          ...req.body,
-          productId: req.params.articleId,
-          id: uniqid(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        const reviewArray = await getReviews();
-        reviewArray.push(newReview);
-        await writeReviews(reviewArray);
-
-        res.status(201).send({ id: newReview.id });
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
-);
-
-reviewsRouter.get("/:articleId", async (req, res, next) => {
+reviewsRouter.post("/", async (req, res, next) => {
   try {
-    const reviewArray = await getReviews();
+    const newReview = new ReviewsModel(req.body);
+    const { _id } = await newReview.save();
+    res.status(201).send({ _id });
+  } catch (error) {
+    next(error);
+  }
+});
 
-    const filteredReviews = reviewArray.filter(
-      (review) => review.productId === req.params.articleId
-    );
-    if (filteredReviews !== reviewArray) {
-      res.send(filteredReviews);
+reviewsRouter.get("/", async (req, res, next) => {
+  try {
+    const reviews = await ReviewsModel.find().populate({
+      path: "productId",
+      select: "name",
+    });
+    res.send(reviews);
+  } catch (error) {
+    next(error);
+  }
+});
+
+reviewsRouter.get("/:reviewId", async (req, res, next) => {
+  try {
+    const review = await ReviewsModel.findById(req.params.reviewId).populate({
+      path: "productId",
+      select: "name",
+    });
+    if (review) {
+      res.send(review);
     } else {
       next(
-        createHttpError(
-          404,
-          `product with id ${req.params.articleId} not found!`
-        )
+        createError(404, `Review with id ${req.params.reviewId} not found!`)
       );
     }
   } catch (error) {
@@ -59,18 +44,18 @@ reviewsRouter.get("/:articleId", async (req, res, next) => {
   }
 });
 
-reviewsRouter.get("/:articleId/:reviewId", async (req, res, next) => {
+reviewsRouter.put("/:reviewId", async (req, res, next) => {
   try {
-    const reviewArray = await getReviews();
-
-    const chosenReview = reviewArray.find(
-      (review) => review.id === req.params.reviewId
+    const updatedReview = await ReviewsModel.findByIdAndUpdate(
+      req.params.reviewId,
+      req.body,
+      { new: true, runValidators: true }
     );
-    if (chosenReview) {
-      res.send(chosenReview);
+    if (updatedReview) {
+      res.send(updatedReview);
     } else {
       next(
-        createHttpError(404, `review with id ${req.params.reviewId} not found!`)
+        createError(404, `Review with id ${req.params.reviewId} not found!`)
       );
     }
   } catch (error) {
@@ -78,38 +63,21 @@ reviewsRouter.get("/:articleId/:reviewId", async (req, res, next) => {
   }
 });
 
-reviewsRouter.put(
-  "/:articleId/:reviewId",
-  checkReviewsSchema,
-  triggerBadRequest,
-  async (req, res, next) => {
-    try {
-      const reviewArray = await getReviews();
-      const index = reviewArray.findIndex(
-        (review) => review.id === req.params.reviewId
+reviewsRouter.delete("/:reviewId", async (req, res, next) => {
+  try {
+    const deletedReview = await ReviewsModel.findByIdAndDelete(
+      req.params.reviewId
+    );
+    if (deletedReview) {
+      res.status(204).send();
+    } else {
+      next(
+        createError(404, `Review with id ${req.params.reviewId} not found!`)
       );
-      if (index !== -1) {
-        const oldReview = reviewArray[index];
-        const newReview = {
-          ...oldReview,
-          ...req.body,
-          updatedAt: new Date(),
-        };
-        reviewArray[index] = newReview;
-        await writeReviews(reviewArray);
-        res.send(newReview);
-      } else {
-        next(
-          createHttpError(
-            404,
-            `article with id ${req.params.articleId} not found!`
-          )
-        );
-      }
-    } catch (error) {
-      next(error);
     }
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 export default reviewsRouter;
