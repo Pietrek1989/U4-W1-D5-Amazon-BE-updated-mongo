@@ -17,7 +17,11 @@ const server = Express();
 const port = 3001;
 // const publicFolderPath = join(process.cwd(), "./public");
 
-const whitelist = [process.env.FE_DEV_URL, process.env.FE_PROD_URL];
+const whitelist = [
+  process.env.FE_DEV_URL,
+  process.env.FE_PROD_URL,
+  process.env.FE_VANILA,
+];
 server.use(
   cors({
     origin: (currentOrigin, corsNext) => {
